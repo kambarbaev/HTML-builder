@@ -3,12 +3,7 @@ const path = require('path');
 const sourcePath = path.resolve(__dirname, 'files');
 const distinationPath = path.resolve(__dirname, 'files-copy');
 
-fs.stat(distinationPath, (error) => {
-  if (error) {
-    fs.mkdir(distinationPath, { recursive: true }, () => {
-      copyFiles(sourcePath, distinationPath);
-    });
-  }
+fs.mkdir(distinationPath, { recursive: true }, () => {
   deleteFiles(distinationPath);
   copyFiles(sourcePath, distinationPath);
 });
