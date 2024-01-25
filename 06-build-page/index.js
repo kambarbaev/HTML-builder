@@ -11,21 +11,37 @@ const bundlehtmlPath = path.join(distinationPath, 'index.html');
 const templateHtml = path.resolve(__dirname, 'template.html');
 
 async function createDirectory(destPath) {
-  await fsp.mkdir(destPath, { recursive: true }, (error) => {
-    if (error) throw error;
-  });
+  await fsp.mkdir(destPath, { recursive: true });
 }
 async function copyFiles(srcPath, distPath) {
   const data = await fsp.readdir(srcPath, {withFileTypes: true });
-  for (let item of data) {
-    const srcFilePath = path.join(srcPath, item.name);
-    const distinationFilePath = path.join(distPath, item.name);
-    if (item.isDirectory()) {
-      await createDirectory(distinationFilePath);
-      await copyFiles(srcFilePath, distinationFilePath);
-    } else {
-      await fsp.copyFile(srcFilePath, distinationFilePath);
+  if (data.length > 0) {
+    for (let item of data) {
+      const srcFilePath = path.join(srcPath, item.name);
+      const distinationFilePath = path.join(distPath, item.name);
+      if (item.isDirectory()) {
+        await createDirectory(distinationFilePath);
+        await copyFiles(srcFilePath, distinationFilePath);
+      } else {
+        await fsp.copyFile(srcFilePath, distinationFilePath);
+      }
     }
+  }
+}
+async function deleteFiles(distPath) {
+  const data = await fsp.readdir(distPath, { withFileTypes: true });
+  if (data.length !== 0) {
+    for (let item of data) {
+      const distinationPath = path.join(distPath, item.name);
+      if (item.isDirectory()) {
+        await deleteFiles(distinationPath);
+      } else {
+        await fsp.unlink(distinationPath);
+      }
+    }
+    await fsp.rmdir(distPath);
+  } else {
+    await fsp.rmdir(distPath);
   }
 }
 function bundleCss(srcPath, bundlePath) {
@@ -58,11 +74,12 @@ async function bundleHtml(templatePath, srcPath, bundlePath) {
   const writeStream = fs.createWriteStream(bundlePath);
   writeStream.write(dataStr);
 }
-async function assembler () {
+async function assembler() {
   await createDirectory(distinationPath);
+  await deleteFiles(distinationPath);
   await createDirectory(distinationAssetsPath);
   await copyFiles(assetsSrcPath, distinationAssetsPath);
   bundleCss(stylesSrcPath, bundleCssPath);
-  bundleHtml(templateHtml, componentsSrcPath, bundlehtmlPath);
+  await bundleHtml(templateHtml, componentsSrcPath, bundlehtmlPath);
 }
 assembler();
