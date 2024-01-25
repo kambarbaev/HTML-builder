@@ -26,9 +26,11 @@ function copyFiles(srcPath, distPath) {
     data.forEach((item) => {
       const srcFilePath = path.join(srcPath, item.name);
       const distinationFilePath = path.join(distPath, item.name);
-      fs.copyFile(srcFilePath, distinationFilePath, (error) => {
-        if (error) throw error;
-      });
+      if (item.isFile()) {
+        fs.copyFile(srcFilePath, distinationFilePath, (error) => {
+          if (error) throw error;
+        });
+      }
     });
   });
 }
