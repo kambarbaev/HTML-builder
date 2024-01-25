@@ -10,28 +10,23 @@ const componentsSrcPath = path.resolve(__dirname, 'components');
 const bundlehtmlPath = path.join(distinationPath, 'index.html');
 const templateHtml = path.resolve(__dirname, 'template.html');
 
-function createDirectory(destPath) {
-  fs.mkdir(destPath, { recursive: true }, (error) => {
+async function createDirectory(destPath) {
+  await fsp.mkdir(destPath, { recursive: true }, (error) => {
     if (error) throw error;
   });
 }
-
-function copyFiles(srcPath, distPath) {
-  fs.readdir(srcPath, { withFileTypes: true }, (error, data) => {
-    if (error) throw error;
-    data.forEach((item) => {
-      const srcFilePath = path.join(srcPath, item.name);
-      const distinationFilePath = path.join(distPath, item.name);
-      if (item.isDirectory()) {
-        createDirectory(distinationFilePath);
-        copyFiles(srcFilePath, distinationFilePath);
-      } else {
-        fs.copyFile(srcFilePath, distinationFilePath, (error) => {
-          if (error) throw error;
-        });
-      }
-    });
-  });
+async function copyFiles(srcPath, distPath) {
+  const data = await fsp.readdir(srcPath, {withFileTypes: true });
+  for (let item of data) {
+    const srcFilePath = path.join(srcPath, item.name);
+    const distinationFilePath = path.join(distPath, item.name);
+    if (item.isDirectory()) {
+      await createDirectory(distinationFilePath);
+      await copyFiles(srcFilePath, distinationFilePath);
+    } else {
+      await fsp.copyFile(srcFilePath, distinationFilePath);
+    }
+  }
 }
 function bundleCss(srcPath, bundlePath) {
   fs.readdir(srcPath, { withFileTypes: true }, (error, data) => {
@@ -57,15 +52,17 @@ async function bundleHtml(templatePath, srcPath, bundlePath) {
     const filePath = path.join(srcPath, item.name);
     const fileName = path.basename(filePath, path.extname(filePath));
     const itemData = await fsp.readFile(filePath, 'utf-8');
-    const changeTemplate = dataStr.replace(`{{${fileName}}}`, itemData);
+    const changeTemplate = dataStr.replaceAll(`{{${fileName}}}`, itemData);
     dataStr = changeTemplate;
   }
   const writeStream = fs.createWriteStream(bundlePath);
   writeStream.write(dataStr);
 }
-
-createDirectory(distinationPath);
-createDirectory(distinationAssetsPath);
-copyFiles(assetsSrcPath, distinationAssetsPath);
-bundleCss(stylesSrcPath, bundleCssPath);
-bundleHtml(templateHtml, componentsSrcPath, bundlehtmlPath);
+async function assembler () {
+  await createDirectory(distinationPath);
+  await createDirectory(distinationAssetsPath);
+  await copyFiles(assetsSrcPath, distinationAssetsPath);
+  bundleCss(stylesSrcPath, bundleCssPath);
+  bundleHtml(templateHtml, componentsSrcPath, bundlehtmlPath);
+}
+assembler();
